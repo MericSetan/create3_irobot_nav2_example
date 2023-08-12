@@ -7,21 +7,26 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from geometry_msgs.msg import PoseStamped
 import tf_transformations
 
+"""
+# Request
+---
+# Result
+bool is_docked
+---
+# Feedback
+"""
 
-
-#dokc islemleri
+#Dock action client
 class UndockClientNode(Node):
     def __init__(self):
         super().__init__('dock_w_nav')
         self.undock_action_client = ActionClient(self, Undock, 'undock')
         self.dock_action_client = ActionClient(self, Dock, 'dock')
-
+    # undocking
     def call_undock_action(self):
         goal_msg = Undock.Goal()
         self.undock_action_client.wait_for_server()    
-
         self._send_goal_future = self.undock_action_client.send_goal_async(goal_msg)
-
         self._send_goal_future.add_done_callback(self.undock_goal_response_callback)
 
     def undock_goal_response_callback(self, future):
@@ -39,15 +44,13 @@ class UndockClientNode(Node):
         if not result.is_docked:
             print("Aksiyon basarili: Robot dock cikti.")
         else:
-            print("Aksiyon basarili değil: Robot dock edilmedi.")
+            print("Aksiyon basarili değil: Robot dock cikamadi.")
 
-
+    #docking
     def call_dock_action(self):
         goal_msg = Dock.Goal()
         self.dock_action_client.wait_for_server()    
-
         self.dock_send_goal_future = self.dock_action_client.send_goal_async(goal_msg)
-
         self.dock_send_goal_future.add_done_callback(self.dock_goal_response_callback)
 
     def dock_goal_response_callback(self, future):
@@ -65,8 +68,9 @@ class UndockClientNode(Node):
         if  result.is_docked:
             print("Aksiyon basarili: Robot dock edildi.")
         else:
-            print("Aksiyon basarili değil: Robot dock edilmedi.")
+            print("Aksiyon basarili değil: Robot dock edilemedi.")
 
+#nav2
 def create_pose_stamped(navigator:BasicNavigator, position_x,position_y,orientation_z):
     q_x, q_y, q_z, q_w = tf_transformations.quaternion_from_euler(0.0,0.0,orientation_z)
     pose = PoseStamped()
@@ -85,22 +89,20 @@ def create_pose_stamped(navigator:BasicNavigator, position_x,position_y,orientat
 def main(args=None):
     rclpy.init(args=args)
     dock = UndockClientNode()
-    #dock.call_dock_action() # docka sokmak icin
-    #dock.call_undock_action() # docktan cikmak icin
     nav = BasicNavigator()
 
     # --- set initial pose 
     initial_pose = create_pose_stamped(nav,9.077 ,8.077 ,0.0)
     nav.setInitialPose(initial_pose=initial_pose)
-
     #--- wait for nav2
     nav.waitUntilNav2Active()
     #--- describe waypoints
     goal_pose1 = create_pose_stamped(nav, 4.076 ,7.999 ,-1.362)
     goal_pose2 = create_pose_stamped(nav,  9.742 ,2.029, 3.119) #bu asamada
-    goal_pose3 = create_pose_stamped(nav,  8.68 ,8.0 ,0.0) # baslangıc konumuna yakin bir yere geri donduruyoruz
-    
+    goal_pose3 = create_pose_stamped(nav,  8.68 ,8.0 ,0.0) # baslangıc konumuna yakin bir yere geri donduruyoruz 
     waypoints = [goal_pose1, goal_pose2, goal_pose3]
+
+
     dock.call_undock_action() #baslangicta docktan cikiyor
     nav.followWaypoints(waypoints) # sırayla noktalara gidiyor
     while not nav.isTaskComplete():
@@ -108,6 +110,8 @@ def main(args=None):
         print(feedback)
     print(nav.getResult())
     dock.call_dock_action()    # docka giriyor  
+
+
     rclpy.spin(dock)
     rclpy.shutdown()
 
