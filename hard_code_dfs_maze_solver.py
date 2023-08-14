@@ -36,7 +36,7 @@ def dfs(x, y):
 
 dfs(0, 0)
 # dizi boyutları eşit mi kontrolü yaabilirsin
-print(gezilen_hucre)
+print(maze)
 
 selected_values = []
 
